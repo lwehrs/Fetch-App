@@ -1,12 +1,10 @@
 package com.example.myapplication;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.content.Context;
 import android.os.Bundle;
-import android.util.Log;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.volley.Request;
@@ -26,7 +24,10 @@ import java.util.Comparator;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-    private TextView textView;
+
+    private RecyclerView recyclerView;
+    private DataAdapter dataAdapter;
+    private List<JSONObject> filteredAndSortedData = new ArrayList<>();
     String url = "https://fetch-hiring.s3.amazonaws.com/hiring.json";
 
     @Override
@@ -34,9 +35,19 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Initialize UI elements
-        textView = findViewById(R.id.textView);
+        // Initialize the RecyclerView
+        recyclerView = findViewById(R.id.recyclerView);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
+        // Initialize the adapter with an empty list
+        dataAdapter = new DataAdapter(filteredAndSortedData);
+        recyclerView.setAdapter(dataAdapter);
+
+        // Fetch and display data
+        fetchData();
+    }
+
+    private void fetchData() {
         // Create a request queue for network requests
         RequestQueue queue = Volley.newRequestQueue(MainActivity.this);
 
@@ -46,32 +57,28 @@ public class MainActivity extends AppCompatActivity {
                 url,
                 null,
                 new Response.Listener<JSONArray>() {
-            @Override
-            public void onResponse(JSONArray response) {
-                // Filter and sort the data
-                List<JSONObject> filteredAndSortedData = new ArrayList<>();
-                try {
-                    filteredAndSortedData = filterAndSort(response);
-                } catch (JSONException e) {
-                    // Filter Sort failed
-                    e.printStackTrace();
-                    // Display toast message for error
-                    showToastMessage(MainActivity.this, "Filter Sort failed");
-                }
-
-                // Display the data in the TextView
-                displayDataInTextView(filteredAndSortedData);
-            }
-        },
-        new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                // Handle network errors
-                error.printStackTrace();
-                // Display toast message for the error
-                showToastMessage(MainActivity.this, "Network error occurred");
-            }
-        });
+                    @Override
+                    public void onResponse(JSONArray response) {
+                        // Filter and sort the data
+                        try {
+                            filteredAndSortedData = filterAndSort(response);
+                            // Update the RecyclerView adapter with the new data
+                            dataAdapter.updateData(filteredAndSortedData);
+                        } catch (JSONException e) {
+                            // Handle JSON parsing error
+                            e.printStackTrace();
+                            showToastMessage("JSON parsing error");
+                        }
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        // Handle network errors
+                        error.printStackTrace();
+                        showToastMessage("Network error occurred");
+                    }
+                });
         queue.add(jsonArrayRequest);
     }
 
@@ -81,7 +88,7 @@ public class MainActivity extends AppCompatActivity {
         for (int i = 0; i < response.length(); i++) {
             JSONObject item = response.getJSONObject(i);
             String name = item.optString("name");
-            if (name != null && !name.isEmpty()  && name != "null"){
+            if (name != null && !name.isEmpty() && !name.equals("null")) {
                 filteredAndSortedData.add(item);
             }
         }
@@ -93,7 +100,7 @@ public class MainActivity extends AppCompatActivity {
                 int listId2 = obj2.optInt("listId");
                 int nameCompare = obj1.optString("name").compareTo(obj2.optString("name"));
 
-                if(listId1 != listId2) {
+                if (listId1 != listId2) {
                     return Integer.compare(listId1, listId2);
                 } else {
                     return nameCompare;
@@ -104,20 +111,7 @@ public class MainActivity extends AppCompatActivity {
         return filteredAndSortedData;
     }
 
-    private void displayDataInTextView(List<JSONObject> data) {
-        // Display the data in the TextView
-        for (int i = 0; i < data.size(); i++) {
-            JSONObject item = data.get(i);
-            String itemId = item.optString("id");
-            textView.append("ID: " + itemId );
-            String itemListId = item.optString("listId");
-            textView.append(" ListID: " + itemListId );
-            String itemName = item.optString("name");
-            textView.append(" Name: " + itemName + "\n");
-        }
-    }
-
-    private void showToastMessage(Context context, String message) {
-        Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+    private void showToastMessage(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 }
