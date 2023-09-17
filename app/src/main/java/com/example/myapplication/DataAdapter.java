@@ -1,5 +1,8 @@
 package com.example.myapplication;
 
+import static java.security.AccessController.getContext;
+
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,7 +15,7 @@ import org.json.JSONObject;
 import java.util.List;
 
 public class DataAdapter extends RecyclerView.Adapter<DataViewHolder> {
-    private List<JSONObject> data;
+    private final List<JSONObject> data;
 
     public DataAdapter(List<JSONObject> data) {
         this.data = data;
@@ -27,10 +30,11 @@ public class DataAdapter extends RecyclerView.Adapter<DataViewHolder> {
 
     @Override
     public void onBindViewHolder(@NonNull DataViewHolder holder, int position) {
+        Context context = holder.itemView.getContext();
         JSONObject item = data.get(position);
-        holder.textViewId.setText("ID: " + item.optString("id"));
-        holder.textViewListId.setText("ListID: " + item.optString("listId"));
-        holder.textViewName.setText("Name: " + item.optString("name"));
+        holder.textViewId.setText(context.getString(R.string.id_str, item.optString("id")));
+        holder.textViewListId.setText(context.getString(R.string.list_id_str, item.optString("listId")));
+        holder.textViewName.setText(context.getString(R.string.name_str, item.optString("name")));
     }
 
     @Override
